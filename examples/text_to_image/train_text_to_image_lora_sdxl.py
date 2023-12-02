@@ -1200,7 +1200,7 @@ def main(args):
 
                 # run inference
                 generator = torch.Generator(device=accelerator.device).manual_seed(args.seed) if args.seed else None
-                pipeline_args = {"prompt": args.validation_prompt}
+                pipeline_args = {"prompt": args.validation_prompt, "height": args.resolution, "width": args.resolution}
 
                 with torch.cuda.amp.autocast():
                     images = [
@@ -1272,8 +1272,10 @@ def main(args):
         images = []
         if args.validation_prompt and args.num_validation_images > 0:
             generator = torch.Generator(device=accelerator.device).manual_seed(args.seed) if args.seed else None
+
+            # We need to ensure that this generates the correct image size
             images = [
-                pipeline(args.validation_prompt, num_inference_steps=25, generator=generator).images[0]
+                pipeline(args.validation_prompt, num_inference_steps=25, width=args.resolution, height=args.resolution, generator=generator).images[0]
                 for _ in range(args.num_validation_images)
             ]
 
