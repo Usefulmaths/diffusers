@@ -1147,6 +1147,53 @@ def main(args):
 
                 if accelerator.is_main_process:
                     if global_step % args.checkpointing_steps == 0:
+                         # Check generation every CHECKPOINTING STEPS
+                        if args.validation_prompt is not None:
+                            logger.info(
+                                f"Running validation... \n Generating {args.num_validation_images} images with prompt:"
+                                f" {args.validation_prompt}."
+                            )
+                            # create pipeline
+                            pipeline = StableDiffusionXLPipeline.from_pretrained(
+                                args.pretrained_model_name_or_path,
+                                vae=vae,
+                                text_encoder=accelerator.unwrap_model(text_encoder_one),
+                                text_encoder_2=accelerator.unwrap_model(text_encoder_two),
+                                unet=accelerator.unwrap_model(unet),
+                                revision=args.revision,
+                                variant=args.variant,
+                                torch_dtype=weight_dtype,
+                            )
+
+                            pipeline = pipeline.to(accelerator.device)
+                            pipeline.set_progress_bar_config(disable=True)
+
+                            # run inference
+                            generator = torch.Generator(device=accelerator.device).manual_seed(args.seed) if args.seed else None
+                            pipeline_args = {"prompt": args.validation_prompt, "height": args.resolution, "width": args.resolution}
+
+                            with torch.cuda.amp.autocast():
+                                images = [
+                                    pipeline(**pipeline_args, generator=generator).images[0]
+                                    for _ in range(args.num_validation_images)
+                                ]
+
+                            for tracker in accelerator.trackers:
+                                if tracker.name == "tensorboard":
+                                    np_images = np.stack([np.asarray(img) for img in images])
+                                    tracker.writer.add_images("validation", np_images, epoch, dataformats="NHWC")
+                                if tracker.name == "wandb":
+                                    tracker.log(
+                                        {
+                                            "validation": [
+                                                wandb.Image(image, caption=f"{i}: {args.validation_prompt}")
+                                                for i, image in enumerate(images)
+                                            ]
+                                        }
+                                    )
+
+                            del pipeline
+                            torch.cuda.empty_cache()
                         # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`
                         if args.checkpoints_total_limit is not None:
                             checkpoints = os.listdir(args.output_dir)
@@ -1177,54 +1224,54 @@ def main(args):
             if global_step >= args.max_train_steps:
                 break
 
-        if accelerator.is_main_process:
-            # Check generation every CHECKPOINTING STEPS
-            if args.validation_prompt is not None and global_step % args.checkpointing_steps == 0:
-                logger.info(
-                    f"Running validation... \n Generating {args.num_validation_images} images with prompt:"
-                    f" {args.validation_prompt}."
-                )
-                # create pipeline
-                pipeline = StableDiffusionXLPipeline.from_pretrained(
-                    args.pretrained_model_name_or_path,
-                    vae=vae,
-                    text_encoder=accelerator.unwrap_model(text_encoder_one),
-                    text_encoder_2=accelerator.unwrap_model(text_encoder_two),
-                    unet=accelerator.unwrap_model(unet),
-                    revision=args.revision,
-                    variant=args.variant,
-                    torch_dtype=weight_dtype,
-                )
+        # if accelerator.is_main_process:
+        #     # Check generation every CHECKPOINTING STEPS
+        #     if args.validation_prompt is not None and global_step % args.checkpointing_steps == 0:
+        #         logger.info(
+        #             f"Running validation... \n Generating {args.num_validation_images} images with prompt:"
+        #             f" {args.validation_prompt}."
+        #         )
+        #         # create pipeline
+        #         pipeline = StableDiffusionXLPipeline.from_pretrained(
+        #             args.pretrained_model_name_or_path,
+        #             vae=vae,
+        #             text_encoder=accelerator.unwrap_model(text_encoder_one),
+        #             text_encoder_2=accelerator.unwrap_model(text_encoder_two),
+        #             unet=accelerator.unwrap_model(unet),
+        #             revision=args.revision,
+        #             variant=args.variant,
+        #             torch_dtype=weight_dtype,
+        #         )
 
-                pipeline = pipeline.to(accelerator.device)
-                pipeline.set_progress_bar_config(disable=True)
+        #         pipeline = pipeline.to(accelerator.device)
+        #         pipeline.set_progress_bar_config(disable=True)
 
-                # run inference
-                generator = torch.Generator(device=accelerator.device).manual_seed(args.seed) if args.seed else None
-                pipeline_args = {"prompt": args.validation_prompt, "height": args.resolution, "width": args.resolution}
+        #         # run inference
+        #         generator = torch.Generator(device=accelerator.device).manual_seed(args.seed) if args.seed else None
+        #         pipeline_args = {"prompt": args.validation_prompt, "height": args.resolution, "width": args.resolution}
 
-                with torch.cuda.amp.autocast():
-                    images = [
-                        pipeline(**pipeline_args, generator=generator).images[0]
-                        for _ in range(args.num_validation_images)
-                    ]
+        #         with torch.cuda.amp.autocast():
+        #             images = [
+        #                 pipeline(**pipeline_args, generator=generator).images[0]
+        #                 for _ in range(args.num_validation_images)
+        #             ]
 
-                for tracker in accelerator.trackers:
-                    if tracker.name == "tensorboard":
-                        np_images = np.stack([np.asarray(img) for img in images])
-                        tracker.writer.add_images("validation", np_images, epoch, dataformats="NHWC")
-                    if tracker.name == "wandb":
-                        tracker.log(
-                            {
-                                "validation": [
-                                    wandb.Image(image, caption=f"{i}: {args.validation_prompt}")
-                                    for i, image in enumerate(images)
-                                ]
-                            }
-                        )
+        #         for tracker in accelerator.trackers:
+        #             if tracker.name == "tensorboard":
+        #                 np_images = np.stack([np.asarray(img) for img in images])
+        #                 tracker.writer.add_images("validation", np_images, epoch, dataformats="NHWC")
+        #             if tracker.name == "wandb":
+        #                 tracker.log(
+        #                     {
+        #                         "validation": [
+        #                             wandb.Image(image, caption=f"{i}: {args.validation_prompt}")
+        #                             for i, image in enumerate(images)
+        #                         ]
+        #                     }
+        #                 )
 
-                del pipeline
-                torch.cuda.empty_cache()
+        #         del pipeline
+        #         torch.cuda.empty_cache()
 
     # Save the lora layers
     accelerator.wait_for_everyone()
