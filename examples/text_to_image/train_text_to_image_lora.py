@@ -452,24 +452,24 @@ def main():
             repo_id = create_repo(
                 repo_id=args.hub_model_id or Path(args.output_dir).name, exist_ok=True, token=args.hub_token
             ).repo_id
-    # # Load scheduler, tokenizer and models.
-    # noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
-    # tokenizer = CLIPTokenizer.from_pretrained(
-    #     args.pretrained_model_name_or_path, subfolder="tokenizer", revision=args.revision
-    # )
-    # text_encoder = CLIPTextModel.from_pretrained(
-    #     args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision
-    # )
-    # vae = AutoencoderKL.from_pretrained(
-    #     args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision, variant=args.variant
-    # )
-    # unet = UNet2DConditionModel.from_pretrained(
-    #     args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant
-    # )
-    # # freeze parameters of models to save more memory
-    # unet.requires_grad_(False)
-    # vae.requires_grad_(False)
-    # text_encoder.requires_grad_(False)
+    # Load scheduler, tokenizer and models.
+    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
+    tokenizer = CLIPTokenizer.from_pretrained(
+        args.pretrained_model_name_or_path, subfolder="tokenizer", revision=args.revision
+    )
+    text_encoder = CLIPTextModel.from_pretrained(
+        args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision
+    )
+    vae = AutoencoderKL.from_pretrained(
+        args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision, variant=args.variant
+    )
+    unet = UNet2DConditionModel.from_pretrained(
+        args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant
+    )
+    # freeze parameters of models to save more memory
+    unet.requires_grad_(False)
+    vae.requires_grad_(False)
+    text_encoder.requires_grad_(False)
 
     # For mixed precision training we cast all non-trainable weigths (vae, non-lora text_encoder and non-lora unet) to half-precision
     # as these weights are only used for inference, keeping weights in full precision is not required.
