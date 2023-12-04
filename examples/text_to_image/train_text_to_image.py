@@ -970,7 +970,7 @@ def main():
 
                 if global_step % args.checkpointing_steps == 0:
                     if accelerator.is_main_process:
-                        if args.validation_prompts is not None and epoch % args.validation_epochs == 0:
+                        if args.validation_prompts is not None and global_step % args.checkpointing_steps == 0:
                             if args.use_ema:
                                 # Store the UNet parameters temporarily and load the EMA parameters to perform inference.
                                 ema_unet.store(unet.parameters())
