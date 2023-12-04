@@ -479,15 +479,10 @@ def main():
     elif accelerator.mixed_precision == "bf16":
         weight_dtype = torch.bfloat16
 
-    # # Move unet, vae and text_encoder to device and cast to weight_dtype
-    # unet.to(accelerator.device, dtype=weight_dtype)
-    # vae.to(accelerator.device, dtype=weight_dtype)
-    # text_encoder.to(accelerator.device, dtype=weight_dtype)
-
-    pipeline = DiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, revision=args.revision, variant=args.variant, use_safetensors=True)
-    pipeline.to(accelerator.device, dtype=weight_dtype)
-
-    unet = pipeline.unet
+    # Move unet, vae and text_encoder to device and cast to weight_dtype
+    unet.to(accelerator.device, dtype=weight_dtype)
+    vae.to(accelerator.device, dtype=weight_dtype)
+    text_encoder.to(accelerator.device, dtype=weight_dtype)
 
     # now we will add new LoRA weights to the attention layers
     # It's important to realize here how many attention weights will be added and of which sizes
