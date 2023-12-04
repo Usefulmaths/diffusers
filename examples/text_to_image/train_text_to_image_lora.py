@@ -805,6 +805,10 @@ def main():
                                 revision=args.revision,
                                 torch_dtype=weight_dtype,
                             )
+                            def dummy(images, **kwargs):
+                                return images, False
+                                
+                            pipeline.safety_checker = dummy
                             pipeline = pipeline.to(accelerator.device)
                             pipeline.set_progress_bar_config(disable=True)
 
