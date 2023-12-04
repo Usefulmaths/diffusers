@@ -483,6 +483,8 @@ def main():
     # unet.to(accelerator.device, dtype=weight_dtype)
     # vae.to(accelerator.device, dtype=weight_dtype)
     # text_encoder.to(accelerator.device, dtype=weight_dtype)
+    import os
+    print(os.listdir('../../../checkpoints'))
 
     pipeline = DiffusionPipeline.from_pretrained(args.pretrained_model_name_or_path, revision=args.revision, variant=args.variant, use_safetensors=True)
     pipeline.to(accelerator.device, dtype=weight_dtype)
