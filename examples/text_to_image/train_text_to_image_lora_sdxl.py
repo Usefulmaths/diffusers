@@ -48,6 +48,7 @@ from diffusers import (
     DDPMScheduler,
     StableDiffusionXLPipeline,
     UNet2DConditionModel,
+    EulerAncestralDiscreteScheduler
 )
 from diffusers.loaders import LoraLoaderMixin
 from diffusers.models.lora import LoRALinearLayer
@@ -1311,6 +1312,7 @@ def main(args):
             variant=args.variant,
             torch_dtype=weight_dtype,
         )
+        pipeline.scheduler = EulerAncestralDiscreteScheduler.from_config(pipeline.scheduler.config)
         pipeline = pipeline.to(accelerator.device)
 
         # load attention processors
@@ -1323,7 +1325,7 @@ def main(args):
 
             # We need to ensure that this generates the correct image size
             images = [
-                pipeline(args.validation_prompt, num_inference_steps=25, width=args.resolution, height=args.resolution, generator=generator).images[0]
+                pipeline(args.validation_prompt, num_inference_steps=50, guidance_scale=12, width=args.resolution, height=args.resolution, generator=generator).images[0]
                 for _ in range(args.num_validation_images)
             ]
 
