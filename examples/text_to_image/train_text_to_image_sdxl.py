@@ -49,6 +49,7 @@ from diffusers import (
     DDPMScheduler,
     StableDiffusionXLPipeline,
     UNet2DConditionModel,
+    EulerAncestralDiscreteScheduler,
 )
 from diffusers.optimization import get_scheduler
 from diffusers.training_utils import EMAModel, compute_snr
@@ -1174,6 +1175,7 @@ def main(args):
                     scheduler_args = {"prediction_type": args.prediction_type}
                     pipeline.scheduler = pipeline.scheduler.from_config(pipeline.scheduler.config, **scheduler_args)
 
+                pipeline.scheduler = EulerAncestralDiscreteScheduler.from_config(pipeline.scheduler.config)
                 pipeline = pipeline.to(accelerator.device)
                 pipeline.set_progress_bar_config(disable=True)
 
@@ -1183,7 +1185,7 @@ def main(args):
 
                 with torch.cuda.amp.autocast():
                     images = [
-                        pipeline(**pipeline_args, generator=generator, num_inference_steps=25).images[0]
+                        pipeline(**pipeline_args, generator=generator, num_inference_steps=50, guidance_scale=12).images[0]
                         for _ in range(args.num_validation_images)
                     ]
 
